@@ -73,13 +73,13 @@ Ref_monitor_struct = None
 
 # show instrument error
 def show_instrument_error(errorcode):
-    msg = errorInfo.get(errordata)
+    msg = errorInfo.get(errorcode)
     QMessageBox.warning(None, 'Waring', msg, QMessageBox.Ok)
     return
 
 # show pdl sts error
 def show_sts_error(errorcode):
-    msg = errorInfo.get(errordata)
+    msg = errorInfo.get(errorcode)
     QMessageBox.warning(None, 'Waring', msg, QMessageBox.Ok)
     return
 
