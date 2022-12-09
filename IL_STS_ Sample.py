@@ -56,6 +56,11 @@ errorInfo = {-2147483648:"Unknown", -40:"InUseError", -30:"ParameterError",
              -6:"MonitorError", 0:"Succeed", 11:"AlreadyConnected",
              10:"Stopped"}
 
+stsProcessErrorInfo = {-2147483648:"Unknown", -1115:"MeasureNotMatch", -1114:"MeasureNotRescaling", 
+                       -1113:"MeasureNotExist", -1112:"ReferenceNotMatch", -1111:"ReferenceNotRescaling", 
+                       -1110:"ReferenceNotExist", -1000:"NoCalculated", -30:"ParameterError", 
+                       -1:"Failure", 0:"Succeed"}
+
 # data struct for STS
 measure_data = []  # list of measurement data
 reference_data = []  # list of reference data
@@ -73,13 +78,13 @@ Ref_monitor_struct = None
 
 # show instrument error
 def show_instrument_error(errorcode):
-    msg = errorInfo.get(errorcode)
+    msg = errorInfo.get(errordata)
     QMessageBox.warning(None, 'Waring', msg, QMessageBox.Ok)
     return
 
 # show pdl sts error
 def show_sts_error(errorcode):
-    msg = errorInfo.get(errorcode)
+    msg = stsProcessErrorInfo.get(errordata)
     QMessageBox.warning(None, 'Waring', msg, QMessageBox.Ok)
     return
 
@@ -93,10 +98,6 @@ def get_usb_resource():
 def get_tsl_usb_resource():
     usb_res = get_usb_resource()
     IL_form.cmb_tsl_usb.addItems(usb_res)
-
-# gets the PCU USB resource connected to the PC
-def get_pcu_usb_resource():
-    usb_res = get_usb_resource()
 
 # gets the DAQ ID
 def get_daq_id():
@@ -156,7 +157,7 @@ def save_reference_raw_data():
     for item in Refdata_struct:
         process_error, powdata = Cal_STS.Get_Ref_Power_Rawdata(item, None)
         if process_error != 0:
-            Show_STS_Error(process_error)
+            show_sts_error(process_error)
             return
 
         lstpowdata.append(powdata)
@@ -172,7 +173,7 @@ def save_reference_raw_data():
         process_error, monitordata = Cal_STS.Get_Ref_Monitor_Rawdata(item, None)
 
         if process_error != 0:
-            Show_STS_Error(process_error)
+            show_sts_error(process_error)
             return
 
         get_struct = STSDataStruct()
@@ -186,7 +187,7 @@ def save_reference_raw_data():
     process_error, wavetable = Cal_STS.Get_Target_Wavelength_Table(None)
 
     if process_error != 0:
-        Show_STS_Error(process_error)
+        show_sts_error(process_error)
         return
 
     hedder = []
@@ -235,7 +236,7 @@ def save_raw_data():
     errorcode, wavelength_table = Cal_STS.Get_Target_Wavelength_Table(None)
 
     if errorcode != 0:
-        Show_STS_Error(errorcode)
+        show_sts_error(errorcode)
         return
 
     for loop1 in range(len(Meas_rang)):
@@ -248,7 +249,7 @@ def save_raw_data():
             errorcode, powerdata = Cal_STS.Get_Meas_Power_Rawdata(item, None)
 
             if errorcode != 0:
-                Show_STS_Error(errorcode)
+                show_sts_error(errorcode)
                 return
 
             lstpower.append(powerdata)
@@ -356,7 +357,7 @@ def read_reference_raw_data():
             errorcode = Cal_STS.Add_Ref_Rawdata(lstPower, lstMonitor, item)
 
             if errorcode != 0:
-                Show_Inst_Error(errorcode)
+                show_sts_error(errorcode)
                 return
     else:
     
@@ -408,7 +409,7 @@ def read_reference_raw_data():
             errorcode = Cal_STS.Add_Ref_Rawdata(lstPower, lstMonitor, item)
     
             if errorcode != 0:
-                Show_Inst_Error(errorcode)
+                show_sts_error(errorcode)
                 return
     
     QMessageBox.information(None, 'information', 'Completed.', QMessageBox.Ok)
@@ -426,39 +427,6 @@ def initial_tsl():
             show_instrument_error(error_code)
             return
     return tsl_information
-
-# initial MPM
-def initial_mpm():
-    mpm_information = {"Product: ": mpm_.Information.ProductName, "FW Ver: ": mpm_.Information.FWversion,
-                       "Module Type: ": mpm_.Information.ModuleType, "Enable module: ":
-                           str(mpm_.Information.NumberofModule)}
-    # Prepare ranges based on the module type
-    for module_count in range(0, mpm_.Information.NumberofModule):
-        if mpm_.Information.ModuleType[module_count] == "MPM-213":
-            # MPM-213 doesn't have rage 5
-            IL_form.chk_range5.setEnabled(False)
-            MPM_213_flag = True
-            break
-        elif mpm_.Information.ModuleType[module_count] == "MPM-215":
-            # MPM-215 only has range 1
-            IL_form.chk_range1.setChecked(True)
-            MPM_215_flag = True
-            for range_number in range(2, 6):
-                exec("IL_form.chk_range%d.setEnabled(False)" % range_number)
-            break
-        # Prepare channel based on the enabled module
-        if mpm_.Information.ModuleType[module_count] == "MPM-212":
-            # MPM-212 only has 2 channel
-            exec("IL_form.chk_m1s%dc1.setEnabled(True)" % module_count)
-            exec("IL_form.chk_m1s%dc2.setEnabled(True)" % module_count)
-            # exec("IL_form.chk_m1s%dc3.setDisabled(True)" % module_count)
-            # exec("IL_form.chk_m1s%dc4.setDisabled(True)" % module_count)
-        else:
-            exec("IL_form.chk_m1s%dc1.setEnabled(True)" % module_count)
-            exec("IL_form.chk_m1s%dc2.setEnabled(True)" % module_count)
-            exec("IL_form.chk_m1s%dc3.setEnabled(True)" % module_count)
-            exec("IL_form.chk_m1s%dc4.setEnabled(True)" % module_count)
-    return mpm_information
 
 # disconnect instrument
 def on_disconnect():
@@ -556,7 +524,6 @@ def on_connect():
 
     # インスツルメント初期化
     initial_tsl()
-    #initial_mpm()
     
     error_code = Check_Module_Information()
     if error_code != 0:
@@ -760,47 +727,47 @@ def set_parameterformeasure():
     # ----TSL Setting 
     inst_error = tsl_.Set_APC_Power_dBm(set_pow)
     if inst_error != 0:
-        Show_Inst_Error(inst_error)
+        show_instrument_error(inst_error)
         return
 
     inst_error = tsl_.TSL_Busy_Check(3000)
     if inst_error != 0:
-        Show_Inst_Error(inst_error)
+        show_instrument_error(inst_error)
         return
 
     inst_error, tsl_acctualstep = tsl_.Set_Sweep_Parameter_for_STS(startwave, stopwave, speed, wavestep, -9999);
 
     if inst_error != 0:
-        Show_Inst_Error(inst_error)
+        show_instrument_error(inst_error)
         return
     
     inst_error = tsl_.Set_Wavelength(startwave)
     if inst_error != 0:
-        Show_Inst_Error(inst_error)
+        show_instrument_error(inst_error)
         return
 
     inst_error = tsl_.TSL_Busy_Check(3000)
     if inst_error != 0:
-        Show_Inst_Error(inst_error)
+        show_instrument_error(inst_error)
         return
     
     for mpm in mpms:
 
         inst_error = mpm.Set_Logging_Paremeter_for_STS(startwave, stopwave, wavestep, speed, MPM.Measurement_Mode.Freerun)
         if inst_error != 0:
-            Show_Inst_Error(inst_error)
+            show_instrument_error(inst_error)
             return
 
     inst_error, averaging_time = mpms[0].Get_Averaging_Time(-999);
 
     if inst_error != 0:
-        Show_Inst_Error(inst_error)
+        show_instrument_error(inst_error)
         return
     
     inst_error = spu_.Set_Sampling_Parameter(startwave, stopwave, speed, tsl_acctualstep);
 
     if inst_error != 0:
-        Show_Inst_Error(inst_error)
+        show_instrument_error(inst_error)
         return
 
     spu_.AveragingTime = averaging_time
@@ -808,27 +775,27 @@ def set_parameterformeasure():
     sts_error = Cal_STS.Clear_Measdata();
 
     if sts_error != 0:
-        Show_STS_Error(sts_error)
+        show_sts_error(sts_error)
         return
 
     sts_error = Cal_STS.Clear_Refdata()
     if sts_error != 0:
-        Show_STS_Error(sts_error)
+        show_sts_error(sts_error)
         return
     
     sts_error = Cal_STS.Set_Rescaling_Setting(RescalingMode.Freerun_SPU, averaging_time, True)
     if sts_error != 0:
-        Show_STS_Error(sts_error)
+        show_sts_error(sts_error)
         return
 
     sts_error = Cal_STS.Make_Sweep_Wavelength_Table(startwave, stopwave, tsl_acctualstep)
     if sts_error != 0:
-        Show_STS_Error(sts_error)
+        show_sts_error(sts_error)
         return
     
     sts_error = Cal_STS.Make_Target_Wavelength_Table(startwave, stopwave, wavestep)
     if sts_error != 0:
-        Show_STS_Error(sts_error)
+        show_sts_error(sts_error)
         return
     
     if IL_form.IL_Sweeping_form.chkeach_ch.isChecked():
@@ -841,71 +808,6 @@ def set_parameterformeasure():
     else:
         QMessageBox.warning(None, 'Waring', "Parameter set Success.", QMessageBox.Ok)
 
-# sweep process
-def sts_sweep_process():
-    # MPM logging start
-    error_code = mpm_.Logging_Start()
-    if error_code != 0:
-        show_instrument_error(error_code)
-        return
-
-    error_code = tsl_.Waiting_For_Sweep_Status(2000, tsl_.Sweep_Status.WaitingforTrigger)
-    if error_code != 0:
-        # When TSL fails, MPM stops logging
-        mpm_.Logging_Stop()
-        show_instrument_error(error_code)
-        return
-
-    error_code = spu_.Sampling_Start()
-    if error_code != 0:
-        mpm_.Logging_Stop()
-        show_instrument_error(error_code)
-        return
-
-    error_code = tsl_.Set_Software_Trigger()
-    if error_code != 0:
-        mpm_.Logging_Stop()
-        show_instrument_error(error_code)
-        return
-
-    error_code = spu_.Waiting_for_sampling()
-    if error_code != 0:
-        mpm_.Logging_Stop()
-        tsl_.Sweep_Stop()
-        show_instrument_error(error_code)
-        return
-
-    logging_status = 0
-    logging_point = 0
-    start_time = time.perf_counter()
-    while logging_status == 0:
-        error_code, logging_status, logging_point = mpm_.Get_Logging_Status(logging_status, logging_point)
-
-        if error_code != 0:
-            mpm_.Logging_Stop()
-            show_instrument_error(error_code)
-            return
-
-        if logging_status == 1:
-            break
-        end_time = time.perf_counter()
-
-        if end_time - start_time > 2000:
-            mpm_.Logging_Stop()
-            error_code = -9999
-            break
-
-    if error_code == -999:
-        QMessageBox.warning(None, 'Waring', '"MPM Trigger receive error! Please check trigger cable connection.',
-                            QMessageBox.Ok)
-        return
-
-    error_code = tsl_.Waiting_For_Sweep_Status(5000, tsl_.Sweep_Status.Standby)
-    if error_code != 0:
-        show_instrument_error(error_code)
-        return
-    return error_code
-
 # STS reference
 def reference():
 
@@ -913,12 +815,12 @@ def reference():
 
         inst_error = mpm.Set_Range(Meas_rang[0])
         if inst_error != 0:
-            Show_Inst_Error(inst_error)
+            show_instrument_error(inst_error)
             return
 
     inst_error = tsl_.Sweep_Start()
     if inst_error != 0:
-        Show_Inst_Error(inst_error)
+        show_instrument_error(inst_error)
         
     global inst_flag
         
@@ -936,27 +838,27 @@ def reference():
                 return 
             
             if inst_error != 0:
-                Show_Inst_Error(inst_error)
+                show_instrument_error(inst_error)
                 return
 
             inst_error = tsl_.Sweep_Start()
             if inst_error != 0:
-                Show_Inst_Error(inst_error)
+                show_instrument_error(inst_error)
 
             inst_error = Get_Each_channel_reference_samplingdata(item.MPMNumber, item.SlotNumber, item.ChannelNumber, item.SweepCount)
 
             if inst_error != 0:
                 if inst_flag == True:
-                    Show_Inst_Error(inst_error)
+                    show_instrument_error(inst_error)
                 else:
-                    Show_STS_Error(inst_error)
+                    show_sts_error(inst_error)
 
                 return
 
             process_error = Cal_STS.Cal_RefData_Rescaling()
 
             if process_error != 0:
-                Show_STS_Error(process_error)
+                show_sts_error(process_error)
                 return
 
     else:
@@ -967,35 +869,34 @@ def reference():
             return
         
         if inst_error != 0:
-            Show_Inst_Error(inst_error)
+            show_instrument_error(inst_error)
             return
     
         inst_error = tsl_.Sweep_Start()
         if inst_error != 0:
-            Show_Inst_Error(inst_error)
+            show_instrument_error(inst_error)
     
         inst_error = Get_reference_samplingdata()
     
         if inst_error != 0:
             if inst_flag == True:
-                Show_Inst_Error(inst_error)
+                show_instrument_error(inst_error)
             else:
-                Show_STS_Error(inst_error)
+                show_sts_error(inst_error)
             return
     
         process_error = Cal_STS.Cal_RefData_Rescaling()
     
         if process_error != 0:
-            Show_STS_Error(process_error)
+            show_sts_error(process_error)
             return
 
     inst_error = tsl_.Sweep_Stop()
     if inst_error != 0:
-        Show_Inst_Error(inst_error)
+        show_instrument_error(inst_error)
         return
 
     QMessageBox.warning(None, 'Waring', 'Completed.', QMessageBox.Ok)
-    
     
 def Sweep_Process():
 
@@ -1152,7 +1053,7 @@ def measure():
 
     inst_error = tsl_.Sweep_Start()
     if inst_error != 0:
-        Show_Inst_Error(inst_error)
+        show_instrument_error(inst_error)
         return
 
     for loop1 in range(len(Meas_rang)):
@@ -1160,32 +1061,32 @@ def measure():
             inst_error = mpm.Set_Range(Meas_rang[loop1])
 
             if inst_error != 0:
-                Show_Inst_Error(inst_error)
+                show_instrument_error(inst_error)
                 return
 
         inst_error = Sweep_Process()
         if inst_error != 0:
-            Show_Inst_Error(inst_error)
+            show_instrument_error(inst_error)
             return
         
         inst_error = tsl_.Sweep_Start()
         if inst_error != 0:
-            Show_Inst_Error(inst_error)
+            show_instrument_error(inst_error)
             return
 
         inst_error = Get_measurement_samplingdata(loop1 + 1)
 
         if inst_error != 0:
             if inst_flag == True:
-                Show_Inst_Error(inst_error)
+                show_instrument_error(inst_error)
             else:
-                Show_STS_Error(inst_error)
+                show_sts_error(inst_error)
             return
 
     process_error = Cal_STS.Cal_MeasData_Rescaling()
 
     if process_error != 0:
-        Show_STS_Error(process_error)
+        show_sts_error(process_error)
         return
 
     if Flag_215 == False:
@@ -1203,11 +1104,11 @@ def measure():
     process_error = Save_Measurement_data()
     
     if process_error != 0:
-        Show_STS_Error(process_error)
+        show_sts_error(process_error)
 
     inst_error = tsl_.Sweep_Stop()
     if inst_error != 0:
-        Show_Inst_Error(inst_error)
+        show_instrument_error(inst_error)
         return
 
     QMessageBox.warning(None, 'Waring', 'Completed.', QMessageBox.Ok)
@@ -1308,9 +1209,6 @@ def save_function():
         file_path = file_path + ".csv"
         
     return file_path
-
-def Show_Inst_Error(errordata):
-    QMessageBox.warning(None, 'Waring', errorInfo.get(errordata), QMessageBox.Ok)
 
 def Prepare_dataST():
     
@@ -1588,7 +1486,6 @@ if __name__ == "__main__":
     IL_form.IL_Sweeping_form = IL_Sweeping_Window()
     IL_form.show()
     get_daq_id()
-    get_pcu_usb_resource()
     get_tsl_usb_resource()
     sys.exit(app.exec_())
 
