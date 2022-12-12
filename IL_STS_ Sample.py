@@ -78,13 +78,13 @@ Ref_monitor_struct = None
 
 # show instrument error
 def show_instrument_error(errorcode):
-    msg = errorInfo.get(errordata)
+    msg = errorInfo.get(errorcode)
     QMessageBox.warning(None, 'Waring', msg, QMessageBox.Ok)
     return
 
 # show pdl sts error
 def show_sts_error(errorcode):
-    msg = stsProcessErrorInfo.get(errordata)
+    msg = stsProcessErrorInfo.get(errorcode)
     QMessageBox.warning(None, 'Waring', msg, QMessageBox.Ok)
     return
 
@@ -462,14 +462,14 @@ def on_connect():
     if IL_form.rdo_tsl_gpib.isChecked():
         tsl_connect_type = CommunicationMethod.GPIB
         tsl_.GPIBConnectType = GPIBConnectType.NI4882
-        tsl_.GPIBBoard = IL_form.txt_tsl_gpib_board.text()
-        tsl_.GPIBAddress = str(IL_form.txt_tsl_gpib_address.text())
+        tsl_.GPIBBoard = int(IL_form.txt_tsl_gpib_board.text())
+        tsl_.GPIBAddress = int(IL_form.txt_tsl_gpib_address.text())
         tsl_.Terminator = CommunicationTerminator.CrLf
         # TSL TCP/IP communication
     if IL_form.rdo_tsl_tcpip.isChecked():
         tsl_connect_type = CommunicationMethod.TCPIP
         tsl_.IPAddress = str(IL_form.txt_tsl_ip.text())
-        tsl_.Port = str(IL_form.txt_tsl_port.text())
+        tsl_.Port = int(IL_form.txt_tsl_port.text())
         tsl_.Terminator = CommunicationTerminator.Cr
         # TSL USB communication
     if IL_form.rdo_tsl_usb.isChecked():
